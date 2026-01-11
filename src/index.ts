@@ -1,19 +1,13 @@
 import { app } from "./server.js";
 import { setupSockets } from "./socket.js";
-import https from "https";
-import fs from "fs";
+import http from "http";
 
-const options = {
-  key: fs.readFileSync("certs/key.pem"),
-  cert: fs.readFileSync("certs/cert.pem"),
-};
-
-const server = https.createServer(options, app);
+const server = http.createServer(app);
 
 setupSockets(server);
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
-  console.log(`HTTPS Backend running on port ${PORT}`);
+  console.log(`Backend running on port ${PORT}`);
 });

@@ -1,5 +1,5 @@
 import { Server } from "socket.io";
-import https from "https";
+import http from "http";
 import { db } from "./db/db.js";
 import { meeting, user, message } from "./db/schema.js";
 import { eq } from "drizzle-orm";
@@ -109,7 +109,7 @@ async function flushMessages() {
 // Flush messages every 5 seconds
 setInterval(flushMessages, 5000);
 
-export function setupSockets(server: https.Server) {
+export function setupSockets(server: http.Server) {
   const io = new Server(server, {
     connectionStateRecovery: {
       maxDisconnectionDuration: 3 * 60 * 1000,
