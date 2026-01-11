@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Express Server Status</title>
+    <style>
+      :root {
+        --bg-dark: #09090b;
+        --card-bg: #18181b;
+        --border: #27272a;
+        --text-main: #e4e4e7;
+        --text-muted: #a1a1aa;
+        --accent: #10b981; /* Emerald Green */
+        --accent-glow: rgba(16, 185, 129, 0.2);
+        --font-mono: "SF Mono", "Fira Code", "Roboto Mono", monospace;
+        --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background-color: var(--bg-dark);
+        color: var(--text-main);
+        font-family: var(--font-sans);
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-image: radial-gradient(
+            circle at 15% 50%,
+            rgba(16, 185, 129, 0.08),
+            transparent 25%
+          ),
+          radial-gradient(
+            circle at 85% 30%,
+            rgba(59, 130, 246, 0.08),
+            transparent 25%
+          );
+      }
+
+      .dashboard {
+        width: 100%;
+        max-width: 800px;
+        background: rgba(24, 24, 27, 0.6);
+        backdrop-filter: blur(12px);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        animation: fadeIn 0.6s ease-out;
+      }
+
+      /* Header Section */
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .server-identity h1 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+      }
+
+      .server-identity p {
+        color: var(--text-muted);
+        font-size: 0.875rem;
+      }
+
+      .status-badge {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--accent);
+        padding: 0.5rem 1rem;
+        border-radius: 9999px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        border: 1px solid rgba(16, 185, 129, 0.2);
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        background-color: var(--accent);
+        border-radius: 50%;
+        position: relative;
+      }
+
+      .status-dot::after {
+        content: "";
+        position: absolute;
+        top: -4px;
+        left: -4px;
+        right: -4px;
+        bottom: -4px;
+        border-radius: 50%;
+        border: 2px solid var(--accent);
+        opacity: 0.5;
+        animation: pulse 2s infinite;
+      }
+
+      /* Metrics Grid */
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        margin-bottom: 2rem;
+      }
+
+      .card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        padding: 1.25rem;
+        border-radius: 12px;
+        transition: transform 0.2s;
+      }
+
+      .card:hover {
+        transform: translateY(-2px);
+        border-color: #3f3f46;
+      }
+
+      .card-label {
+        color: var(--text-muted);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+      }
+
+      .card-value {
+        font-family: var(--font-mono);
+        font-size: 1.25rem;
+        font-weight: 600;
+      }
+
+      /* Terminal Section */
+      .terminal-window {
+        background: #000;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        overflow: hidden;
+        font-family: var(--font-mono);
+        font-size: 0.875rem;
+      }
+
+      .terminal-header {
+        background: #27272a;
+        padding: 0.5rem 1rem;
+        display: flex;
+        gap: 6px;
+      }
+
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+      }
+      .red {
+        background: #ef4444;
+      }
+      .yellow {
+        background: #eab308;
+      }
+      .green {
+        background: #22c55e;
+      }
+
+      .terminal-body {
+        padding: 1rem;
+        height: 150px;
+        overflow: hidden;
+        color: #d4d4d8;
+        position: relative;
+      }
+
+      .log-line {
+        margin-bottom: 0.5rem;
+        opacity: 0;
+        animation: typeIn 0.5s forwards;
+      }
+
+      .log-line:nth-child(1) {
+        animation-delay: 0.2s;
+      }
+      .log-line:nth-child(2) {
+        animation-delay: 0.8s;
+      }
+      .log-line:nth-child(3) {
+        animation-delay: 1.4s;
+      }
+      .log-line:nth-child(4) {
+        animation-delay: 2s;
+      }
+
+      .cursor {
+        display: inline-block;
+        width: 8px;
+        height: 15px;
+        background: var(--accent);
+        animation: blink 1s step-end infinite;
+        vertical-align: middle;
+      }
+
+      .timestamp {
+        color: #52525b;
+        margin-right: 0.5rem;
+      }
+
+      .green-text {
+        color: var(--accent);
+      }
+      .blue-text {
+        color: #60a5fa;
+      }
+
+      /* Footer */
+      .footer {
+        margin-top: 1.5rem;
+        text-align: center;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+      }
+
+      /* Animations */
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+          opacity: 0.5;
+        }
+        70% {
+          transform: scale(1.8);
+          opacity: 0;
+        }
+        100% {
+          transform: scale(1);
+          opacity: 0;
+        }
+      }
+
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0;
+        }
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes typeIn {
+        from {
+          opacity: 0;
+          transform: translateX(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      /* Mobile Responsive */
+      @media (max-width: 600px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        .dashboard {
+          width: 95%;
+          padding: 1.5rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dashboard">
+      <header class="header">
+        <div class="server-identity">
+          <h1>Express API Server</h1>
+          <p>Node.js Runtime Environment</p>
+        </div>
+        <div class="status-badge">
+          <div class="status-dot"></div>
+          SYSTEM ONLINE
+        </div>
+      </header>
+
+      <div class="grid">
+        <div class="card">
+          <div class="card-label">Environment</div>
+          <div class="card-value">Production</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Port</div>
+          <div class="card-value">4000</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Health</div>
+          <div class="card-value" style="color: var(--accent)">100%</div>
+        </div>
+      </div>
+
+      <div class="terminal-window">
+        <div class="terminal-header">
+          <div class="dot red"></div>
+          <div class="dot yellow"></div>
+          <div class="dot green"></div>
+        </div>
+        <div class="terminal-body">
+          <div class="log-line">
+            <span class="timestamp">[init]</span>
+            Loading middleware configurations...
+          </div>
+          <div class="log-line">
+            <span class="timestamp">[sys]</span>
+            <span class="blue-text">Connecting to database cluster...</span>
+          </div>
+          <div class="log-line">
+            <span class="timestamp">[net]</span>
+            Database connection established.
+          </div>
+          <div class="log-line">
+            <span class="timestamp">[ok]</span>
+            <span class="green-text"
+              >Server listening on port 4000 successfully.</span
+            >
+          </div>
+          <div class="log-line" style="animation-delay: 2.5s; margin-top: 10px">
+            <span class="green-text">➜</span> <span class="cursor"></span>
+          </div>
+        </div>
+      </div>
+
+      <footer class="footer">
+        Express.js Framework • <span id="express-version">{{EXPRESS_VERSION}}</span> • Secure
+        Connection
+      </footer>
+    </div>
+    <script type="module">
+    </script>
+  </body>
+</html>
