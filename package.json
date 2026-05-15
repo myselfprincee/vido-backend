@@ -19,7 +19,7 @@
   "dependencies": {
     "@types/cors": "^2.8.19",
     "@types/jsonwebtoken": "^9.0.10",
-    "better-auth": "^1.4.10",
+    "better-auth": "^1.6.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.1",
